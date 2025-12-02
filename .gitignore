@@ -1,0 +1,30 @@
+# Model files (too large for git)
+*.pth
+*.index
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Folders with large model files
+# model1/
+# model2/
+# model3/
+# Aoffy/
+# Jeremii/
+# merge_G/
+# merge_D/
