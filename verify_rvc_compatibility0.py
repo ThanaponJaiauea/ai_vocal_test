@@ -7,26 +7,12 @@ for all required keys that RVC expects.
 """
 import torch
 
-def get_state_dict(ckpt):
-    """Extract state dict from checkpoint, handling 'model' key wrapper."""
-    if isinstance(ckpt, dict):
-        if 'model' in ckpt:
-            return ckpt['model']
-        return ckpt
-    return ckpt
-
 def check_generator(path):
     print(f"\n{'='*60}")
     print(f"Checking Generator: {path}")
     print('='*60)
     
-    try:
-        ckpt = torch.load(path, map_location='cpu')
-    except Exception as e:
-        print(f"❌ Error loading file: {e}")
-        return False
-
-    state_dict = get_state_dict(ckpt)
+    ckpt = torch.load(path, map_location='cpu')
     
     # Required prefixes for RVC v2 Generator
     required_prefixes = [
@@ -38,8 +24,8 @@ def check_generator(path):
     ]
     
     found_prefixes = set()
-    if isinstance(state_dict, dict):
-        for key in state_dict.keys():
+    if isinstance(ckpt, dict):
+        for key in ckpt.keys():
             prefix = key.split('.')[0] + '.'
             found_prefixes.add(prefix)
     
@@ -47,7 +33,7 @@ def check_generator(path):
     print(f"\nRequired prefixes check:")
     all_found = True
     for prefix in required_prefixes:
-        found = any(k.startswith(prefix) for k in state_dict.keys())
+        found = any(k.startswith(prefix) for k in ckpt.keys())
         status = "✓" if found else "✗"
         print(f"  {status} {prefix}")
         if not found:
@@ -66,13 +52,7 @@ def check_discriminator(path):
     print(f"Checking Discriminator: {path}")
     print('='*60)
     
-    try:
-        ckpt = torch.load(path, map_location='cpu')
-    except Exception as e:
-        print(f"❌ Error loading file: {e}")
-        return False
-    
-    state_dict = get_state_dict(ckpt)
+    ckpt = torch.load(path, map_location='cpu')
     
     # Required prefixes for RVC v2 Discriminator
     required_prefixes = [
@@ -80,8 +60,8 @@ def check_discriminator(path):
     ]
     
     found_prefixes = set()
-    if isinstance(state_dict, dict):
-        for key in state_dict.keys():
+    if isinstance(ckpt, dict):
+        for key in ckpt.keys():
             prefix = key.split('.')[0] + '.'
             found_prefixes.add(prefix)
     
@@ -89,7 +69,7 @@ def check_discriminator(path):
     print(f"\nRequired prefixes check:")
     all_found = True
     for prefix in required_prefixes:
-        found = any(k.startswith(prefix) for k in state_dict.keys())
+        found = any(k.startswith(prefix) for k in ckpt.keys())
         status = "✓" if found else "✗"
         print(f"  {status} {prefix}")
         if not found:

@@ -72,16 +72,20 @@ def merge_state_dicts(*state_dicts):
 
 def main():
     # ==========================================
-    # ⚙️ CONFIGURATION: Add your models here
-    # Format: ('Folder Path', Epoch_Number)
+    # ⚙️ CONFIGURATION
     # ==========================================
-    models_config = [
+    
+    # 1. Base Model (ยืนพื้น 50%)
+    # Folder containing f0G40k.pth and f0D40k.pth
+    base_model_folder = 'assets/model_base_0'
+    
+    # 2. New Models to Merge (รวมกันแล้วเอาไปผสมกับ Base อีก 50%)
+    # Format: ('Folder Path', Epoch_Number)
+    new_models_config = [
         ('assets/model1', 400),
         ('assets/model2', 400),
         ('assets/model3', 450),
-        # Add more models easily:
-        # ('assets/model4', 500),
-        # ('assets/model5', 1000),
+        ('assets/model4', 450), # Added model4
     ]
     # ==========================================
 
@@ -89,74 +93,88 @@ def main():
     os.makedirs('merge_G', exist_ok=True)
     os.makedirs('merge_D', exist_ok=True)
     
-    g_state_dicts = []
-    d_state_dicts = []
-    
     logging.info('=' * 60)
-    logging.info(f'PREPARING TO MERGE {len(models_config)} MODELS')
+    logging.info(f'MODE: Base Model (f0G/f0D) + {len(new_models_config)} New Models')
     logging.info('=' * 60)
 
-    # Load all models
-    for i, (folder, epoch) in enumerate(models_config):
-        # Construct paths
-        g_path = f"{folder}/G_{epoch}.pth"
-        d_path = f"{folder}/D_{epoch}.pth"
-        
-        logging.info(f'[{i+1}/{len(models_config)}] Loading from: {folder} (Epoch {epoch})')
-        
-        # Load Generator
-        if os.path.exists(g_path):
-            logging.info(f'  - Loading G: {g_path}')
-            g_ckpt = torch.load(g_path, map_location='cpu')
-            g_state = g_ckpt if not isinstance(g_ckpt, dict) or 'model' not in g_ckpt else g_ckpt.get('model', g_ckpt)
-            g_state_dicts.append(g_state)
-        else:
-            logging.error(f'  ❌ File not found: {g_path}')
-            return
+    # --- Helper to load a model ---
+    def load_checkpoint(path):
+        if not os.path.exists(path):
+            logging.error(f'❌ File not found: {path}')
+            return None
+        logging.info(f'  - Loading: {path}')
+        ckpt = torch.load(path, map_location='cpu')
+        return ckpt if not isinstance(ckpt, dict) or 'model' not in ckpt else ckpt.get('model', ckpt)
 
-        # Load Discriminator
-        if os.path.exists(d_path):
-            logging.info(f'  - Loading D: {d_path}')
-            d_ckpt = torch.load(d_path, map_location='cpu')
-            d_state = d_ckpt if not isinstance(d_ckpt, dict) or 'model' not in d_ckpt else d_ckpt.get('model', d_ckpt)
-            d_state_dicts.append(d_state)
-        else:
-            logging.error(f'  ❌ File not found: {d_path}')
-            return
+    # --- PROCESS GENERATORS ---
+    logging.info('\n' + '=' * 30 + ' PROCESSING GENERATORS ' + '=' * 30)
+    
+    # 1. Load Base G (f0G40k.pth)
+    base_g_path = f"{base_model_folder}/f0G40k.pth"
+    logging.info(f'Loading Base Generator...')
+    base_g = load_checkpoint(base_g_path)
+    if base_g is None: return
 
-    # Merge Generators
-    logging.info('=' * 60)
-    logging.info('MERGING GENERATORS')
-    logging.info('=' * 60)
+    # 2. Load New Models G (G_xxxx.pth)
+    new_g_list = []
+    logging.info(f'Loading {len(new_models_config)} New Generators...')
+    for folder, epoch in new_models_config:
+        path = f"{folder}/G_{epoch}.pth"
+        g = load_checkpoint(path)
+        if g is None: return
+        new_g_list.append(g)
+
+    # 3. Merge New Models First
+    logging.info('Step 1: Merging new models together...')
+    merged_new_g = merge_state_dicts(*new_g_list)
     
-    merged_g = merge_state_dicts(*g_state_dicts)
+    # 4. Merge with Base (50/50)
+    logging.info('Step 2: Merging result with Base Model (50/50)...')
+    final_g = merge_state_dicts(base_g, merged_new_g)
     
-    # Save in RVC-compatible format with 'model' key
+    # Save G
     output_g_path = 'merge_G/f0G40k.pth'
-    output_g = {'model': merged_g}
-    torch.save(output_g, output_g_path)
-    logging.info(f'✓ Saved merged Generator to: {output_g_path}')
+    torch.save({'model': final_g}, output_g_path)
+    logging.info(f'✓ Saved Final Generator to: {output_g_path}')
+
+
+    # --- PROCESS DISCRIMINATORS ---
+    logging.info('\n' + '=' * 30 + ' PROCESSING DISCRIMINATORS ' + '=' * 30)
     
-    # Merge Discriminators
-    logging.info('=' * 60)
-    logging.info('MERGING DISCRIMINATORS')
-    logging.info('=' * 60)
+    # 1. Load Base D (f0D40k.pth)
+    base_d_path = f"{base_model_folder}/f0D40k.pth"
+    logging.info(f'Loading Base Discriminator...')
+    base_d = load_checkpoint(base_d_path)
+    if base_d is None: return
+
+    # 2. Load New Models D (D_xxxx.pth)
+    new_d_list = []
+    logging.info(f'Loading {len(new_models_config)} New Discriminators...')
+    for folder, epoch in new_models_config:
+        path = f"{folder}/D_{epoch}.pth"
+        d = load_checkpoint(path)
+        if d is None: return
+        new_d_list.append(d)
+
+    # 3. Merge New Models First
+    logging.info('Step 1: Merging new models together...')
+    merged_new_d = merge_state_dicts(*new_d_list)
     
-    merged_d = merge_state_dicts(*d_state_dicts)
+    # 4. Merge with Base (50/50)
+    logging.info('Step 2: Merging result with Base Model (50/50)...')
+    final_d = merge_state_dicts(base_d, merged_new_d)
     
-    # Save in RVC-compatible format with 'model' key
+    # Save D
     output_d_path = 'merge_D/f0D40k.pth'
-    output_d = {'model': merged_d}
-    torch.save(output_d, output_d_path)
-    logging.info(f'✓ Saved merged Discriminator to: {output_d_path}')
+    torch.save({'model': final_d}, output_d_path)
+    logging.info(f'✓ Saved Final Discriminator to: {output_d_path}')
     
-    logging.info('=' * 60)
+    logging.info('\n' + '=' * 60)
     logging.info('MERGE COMPLETED SUCCESSFULLY!')
     logging.info('=' * 60)
     logging.info(f'Generator: {output_g_path}')
     logging.info(f'Discriminator: {output_d_path}')
-    logging.info('')
-    logging.info('These files should now be compatible with RVC WebUI.')
+
 
 
 if __name__ == '__main__':
