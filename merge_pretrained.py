@@ -71,40 +71,65 @@ def merge_state_dicts(*state_dicts):
 
 
 def main():
-    # Paths to original checkpoint files
-    model1_g = 'model1/G_400.pth'
-    model1_d = 'model1/D_400.pth'
+    # ==========================================
+    # ⚙️ CONFIGURATION: Add your models here
+    # Format: ('Folder Path', Epoch_Number)
+    # ==========================================
+    models_config = [
+        ('assets/model1', 400),
+        ('assets/model2', 400),
+        ('assets/model3', 450),
+        # Add more models easily:
+        # ('assets/model4', 500),
+        # ('assets/model5', 1000),
+    ]
+    # ==========================================
 
-    model2_g = 'model2/G_400.pth'
-    model2_d = 'model2/D_400.pth'
-
-    model3_g = 'model3/G_450.pth'
-    model3_d = 'model3/D_450.pth'
-    
     # Output directories
     os.makedirs('merge_G', exist_ok=True)
     os.makedirs('merge_D', exist_ok=True)
     
+    g_state_dicts = []
+    d_state_dicts = []
+    
+    logging.info('=' * 60)
+    logging.info(f'PREPARING TO MERGE {len(models_config)} MODELS')
+    logging.info('=' * 60)
+
+    # Load all models
+    for i, (folder, epoch) in enumerate(models_config):
+        # Construct paths
+        g_path = f"{folder}/G_{epoch}.pth"
+        d_path = f"{folder}/D_{epoch}.pth"
+        
+        logging.info(f'[{i+1}/{len(models_config)}] Loading from: {folder} (Epoch {epoch})')
+        
+        # Load Generator
+        if os.path.exists(g_path):
+            logging.info(f'  - Loading G: {g_path}')
+            g_ckpt = torch.load(g_path, map_location='cpu')
+            g_state = g_ckpt if not isinstance(g_ckpt, dict) or 'model' not in g_ckpt else g_ckpt.get('model', g_ckpt)
+            g_state_dicts.append(g_state)
+        else:
+            logging.error(f'  ❌ File not found: {g_path}')
+            return
+
+        # Load Discriminator
+        if os.path.exists(d_path):
+            logging.info(f'  - Loading D: {d_path}')
+            d_ckpt = torch.load(d_path, map_location='cpu')
+            d_state = d_ckpt if not isinstance(d_ckpt, dict) or 'model' not in d_ckpt else d_ckpt.get('model', d_ckpt)
+            d_state_dicts.append(d_state)
+        else:
+            logging.error(f'  ❌ File not found: {d_path}')
+            return
+
     # Merge Generators
     logging.info('=' * 60)
     logging.info('MERGING GENERATORS')
     logging.info('=' * 60)
     
-    logging.info(f'Loading: {model1_g}')
-    g1_ckpt = torch.load(model1_g, map_location='cpu')
-    
-    logging.info(f'Loading: {model2_g}')
-    g2_ckpt = torch.load(model2_g, map_location='cpu')
-    
-    logging.info(f'Loading: {model3_g}')
-    g3_ckpt = torch.load(model3_g, map_location='cpu')
-    
-    # Extract state dicts (these are already full model state dicts)
-    g1_state = g1_ckpt if not isinstance(g1_ckpt, dict) or 'model' not in g1_ckpt else g1_ckpt.get('model', g1_ckpt)
-    g2_state = g2_ckpt if not isinstance(g2_ckpt, dict) or 'model' not in g2_ckpt else g2_ckpt.get('model', g2_ckpt)
-    g3_state = g3_ckpt if not isinstance(g3_ckpt, dict) or 'model' not in g3_ckpt else g3_ckpt.get('model', g3_ckpt)
-    
-    merged_g = merge_state_dicts(g1_state, g2_state, g3_state)
+    merged_g = merge_state_dicts(*g_state_dicts)
     
     # Save in RVC-compatible format with 'model' key
     output_g_path = 'merge_G/f0G40k.pth'
@@ -117,21 +142,7 @@ def main():
     logging.info('MERGING DISCRIMINATORS')
     logging.info('=' * 60)
     
-    logging.info(f'Loading: {model1_d}')
-    d1_ckpt = torch.load(model1_d, map_location='cpu')
-    
-    logging.info(f'Loading: {model2_d}')
-    d2_ckpt = torch.load(model2_d, map_location='cpu')
-    
-    logging.info(f'Loading: {model3_d}')
-    d3_ckpt = torch.load(model3_d, map_location='cpu')
-    
-    # Extract state dicts
-    d1_state = d1_ckpt if not isinstance(d1_ckpt, dict) or 'model' not in d1_ckpt else d1_ckpt.get('model', d1_ckpt)
-    d2_state = d2_ckpt if not isinstance(d2_ckpt, dict) or 'model' not in d2_ckpt else d2_ckpt.get('model', d2_ckpt)
-    d3_state = d3_ckpt if not isinstance(d3_ckpt, dict) or 'model' not in d3_ckpt else d3_ckpt.get('model', d3_ckpt)
-    
-    merged_d = merge_state_dicts(d1_state, d2_state, d3_state)
+    merged_d = merge_state_dicts(*d_state_dicts)
     
     # Save in RVC-compatible format with 'model' key
     output_d_path = 'merge_D/f0D40k.pth'
