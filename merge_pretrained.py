@@ -82,10 +82,8 @@ def main():
     # 2. New Models to Merge (รวมกันแล้วเอาไปผสมกับ Base อีก 50%)
     # Format: ('Folder Path', Epoch_Number)
     new_models_config = [
-        ('assets/model1', 400),
-        ('assets/model2', 400),
-        ('assets/model3', 450),
-        ('assets/model4', 450), # Added model4
+        ('assets/model1', 46250),
+        ('assets/model2', 6800),
     ]
     # ==========================================
 
