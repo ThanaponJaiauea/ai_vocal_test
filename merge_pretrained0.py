@@ -76,12 +76,11 @@ def main():
     # Format: ('Folder Path', Epoch_Number)
     # ==========================================
     models_config = [
-        ('assets/model1', 400),
-        ('assets/model2', 400),
-        ('assets/model3', 450),
-        # Add more models easily:
-        # ('assets/model4', 500),
-        # ('assets/model5', 1000),
+        ('assets/model1', 35200),
+        ('assets/model2', 74000),
+        ('assets/model3', 27200),
+        ('assets/model4', 96400),
+        ('assets/model5', 36400),
     ]
     # ==========================================
 
@@ -132,7 +131,7 @@ def main():
     merged_g = merge_state_dicts(*g_state_dicts)
     
     # Save in RVC-compatible format with 'model' key
-    output_g_path = 'merge_G/f0G40k.pth'
+    output_g_path = 'merge_G/G.pth'
     output_g = {'model': merged_g}
     torch.save(output_g, output_g_path)
     logging.info(f'✓ Saved merged Generator to: {output_g_path}')
@@ -145,7 +144,7 @@ def main():
     merged_d = merge_state_dicts(*d_state_dicts)
     
     # Save in RVC-compatible format with 'model' key
-    output_d_path = 'merge_D/f0D40k.pth'
+    output_d_path = 'merge_D/D.pth'
     output_d = {'model': merged_d}
     torch.save(output_d, output_d_path)
     logging.info(f'✓ Saved merged Discriminator to: {output_d_path}')
