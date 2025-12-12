@@ -88,6 +88,7 @@ def main():
         ('assets/model4', 96400),
         ('assets/model5', 36400),
         ('assets/model6', 50800),
+        ('assets/model7', 40800),
     ]
     # ==========================================
 
